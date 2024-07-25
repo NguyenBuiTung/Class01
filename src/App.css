@@ -1,0 +1,12 @@
+.formchat{
+  display: flex;
+  justify-content: center;
+}
+.chatbox h1{
+  text-align: center;
+}
+/* #joinRoom{
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+} */
