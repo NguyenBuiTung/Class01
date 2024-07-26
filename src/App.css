@@ -31,7 +31,7 @@
   border-top-left-radius: 20px !important;
   border-bottom-left-radius: 20px !important;
 }
-#chatRoom .ant-btn{
+#chatRoom .sendbutton{
   border-radius: 0 !important;
   border-top-right-radius: 20px !important;
   border-bottom-right-radius: 20px !important;

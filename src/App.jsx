@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Button, Flex, Form, Input, message, Select } from "antd";
-import { ArrowUpOutlined } from "@ant-design/icons";
+import { ArrowUpOutlined, LogoutOutlined } from "@ant-design/icons";
 import "./App.css";
 import * as signalR from "@microsoft/signalr";
 
 function App() {
+  const [form] = Form.useForm();
   const [messages, setMessages] = useState([]);
   const [connection, setConnection] = useState(null);
   const [chatRoom, setChatRoom] = useState(null);
@@ -34,39 +35,67 @@ function App() {
     const username = values.user;
 
     if (connection) {
+      // Add the event listener for ReceiveMessage only once
+      connection.off("ReceiveMessage"); // Remove any previously added listeners
+      connection.on("ReceiveMessage", (user, mess, timestamp) => {
+        if (mess === "Tên người dùng đã tồn tại") {
+          message.error("Tên người dùng đã tồn tại");
+          return;
+        } else {
+          setMessages((prevMessages) => [
+            ...prevMessages,
+            { user, mess, timestamp },
+          ]);
+          // Update the chat room and user if the join was successful
+          setChatRoom(room);
+          setUser(username);
+       
+        }
+      });
+      // message.success("Đã vào phòng chat");
+      // Send the join request
       await connection.send("JoinChatRoom", {
         Username: username,
         ChatRoom: room,
       });
-      setChatRoom(room);
-      setUser(username);
-
-      connection.on("ReceiveMessage", (user, message, timestamp) => {
-        console.log("Message received:", { user, message, timestamp });
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          { user, message, timestamp },
-        ]);
-      });
-      message.success("Đã vào phòng chat");
     }
   };
-
-  const [form] = Form.useForm();
 
   const onFinish = async (values) => {
-    const message = values.message;
-    form.resetFields();  // Reset form fields after message is sent
+    const mess = values.message;
+    form.resetFields(); // Reset form fields after message is sent
     if (connection && chatRoom) {
-      await connection.send("SendMessageToRoom", chatRoom, user, message);
-  
+      await connection.send("SendMessageToRoom", chatRoom, user, mess);
     }
   };
+  const leaveChatRoom = async () => {
+    if (connection && chatRoom && user) {
+      await connection.send("LeaveChatRoom", chatRoom, user);
+      setChatRoom("");
+      setUser("");
+      setMessages([]);
+      message.success("Bạn đã rời phòng chat.");
+    }
+  };
+// Add the event listener for page unload
+useEffect(() => {
+  const handleBeforeUnload = async (event) => {
+    await leaveChatRoom();
+    event.preventDefault(); // For some browsers to show a confirmation dialog
+    event.returnValue = ''; // For some browsers to show a confirmation dialog
+  };
+
+  window.addEventListener('beforeunload', handleBeforeUnload);
+
+  return () => {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+  };
+}, [connection, chatRoom, user]);
   return (
     <div className="chatbox">
-      <h1>Realtime Chat Nguyễn Bùi Tùng</h1>
+      <h1>Realtime ChatRoom Class01</h1>
       <div style={{ overflow: "auto" }}>
-        {messages.length > 0 && (
+        {chatRoom && (
           <div style={{ display: "flex", justifyContent: "center" }}>
             <ol className="chat">
               {messages.map((msg, index) => (
@@ -80,12 +109,20 @@ function App() {
                     borderRadius: "10px",
                     padding: "10px",
                     margin: "5px",
-                    width: msg.user === "Chủ phòng thông báo" ? "100%" : "40%",
+                    width: msg.user === "Thông báo" ? "100%" : "40%",
                     wordWrap: "break-word",
                   }}
                 >
-                  <strong>{msg.user}</strong>: {msg.message}
-                  <p style={{fontSize:"13px",textAlign:"end",marginTop:"4px"}}>{msg.timestamp}  </p>
+                  <strong>{msg.user}</strong>: {msg.mess}
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      textAlign: "end",
+                      marginTop: "4px",
+                    }}
+                  >
+                    {msg.timestamp}{" "}
+                  </p>
                 </div>
               ))}
             </ol>
@@ -152,16 +189,29 @@ function App() {
                     { required: true, message: "Vui lòng nhập nội dung" },
                   ]}
                 >
-                  <Input
-                    size="large"
-                  />
+                  <Input size="large" />
                 </Form.Item>
                 <Form.Item>
-                  <Button size="large" type="primary" htmlType="submit">
+                  <Button
+                    className="sendbutton"
+                    size="large"
+                    type="primary"
+                    htmlType="submit"
+                  >
                     Gửi <ArrowUpOutlined style={{ marginLeft: 8 }} />
                   </Button>
                 </Form.Item>
               </Flex>
+              <Form.Item style={{textAlign:"center"}}>
+                <Button  style={{borderRadius:"50%",width:50,height:50}}
+                  size="large"
+                  type="primary"
+                  danger
+                  onClick={leaveChatRoom}
+                >
+                   <LogoutOutlined />
+                </Button>
+              </Form.Item>
             </Form>
           </>
         )}
