@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
-import { Avatar, Button, Flex, Form, Input, List, message, Select } from "antd";
+import { Button, Flex, Form, Input, message, Select } from "antd";
 import { ArrowUpOutlined } from "@ant-design/icons";
 import "./App.css";
 import * as signalR from "@microsoft/signalr";
 
 function App() {
-  const [form] = Form.useForm();
   const [messages, setMessages] = useState([]);
   const [connection, setConnection] = useState(null);
   const [chatRoom, setChatRoom] = useState(null);
@@ -42,57 +41,56 @@ function App() {
       setChatRoom(room);
       setUser(username);
 
-      connection.on("ReceiveMessage", (user, message) => {
-        console.log("Message received:", { user, message });
-        setMessages((prevMessages) => [...prevMessages, { user, message }]);
+      connection.on("ReceiveMessage", (user, message, timestamp) => {
+        console.log("Message received:", { user, message, timestamp });
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { user, message, timestamp },
+        ]);
       });
       message.success("Đã vào phòng chat");
     }
   };
 
+  const [form] = Form.useForm();
+
   const onFinish = async (values) => {
     const message = values.message;
+    form.resetFields();  // Reset form fields after message is sent
     if (connection && chatRoom) {
       await connection.send("SendMessageToRoom", chatRoom, user, message);
+  
     }
   };
-
   return (
     <div className="chatbox">
       <h1>Realtime Chat Nguyễn Bùi Tùng</h1>
       <div style={{ overflow: "auto" }}>
-        
-
-        {messages.length > 0 && <div style={{display:'flex',justifyContent:"center"}}>
-          {/* <div className="menu">
-            <a href="#" className="back">
-              <i className="fa fa-angle-left" />{" "}
-              <img src="https://i.imgur.com/G4EjwqQ.jpg" draggable="false" />
-            </a>
-            <div className="name">Random chat</div>
-            <div className="members">
-              <b>You</b>, Marga, Charo &amp; Brotons
-            </div>
-          </div> */}
-          <ol className="chat">
-            {messages.map((item)=>(
-               <li className="other">
-               <div className="msg">
-                 <div className="user">
-                   {item.user}
-                 </div>
-                 <p>
-                  {item.message} 
-                 </p>
-                 <time>20:17</time>
-               </div>
-             </li>
-            ))}
-            
-            
-          </ol>
-          
-        </div>}
+        {messages.length > 0 && (
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <ol className="chat">
+              {messages.map((msg, index) => (
+                <div
+                  key={index}
+                  className="message"
+                  style={{
+                    color: msg.user === "#000",
+                    alignSelf: msg.user === user ? "flex-end" : "flex-start",
+                    backgroundColor: msg.user === user ? "#69c0ff" : "#f0f0f0",
+                    borderRadius: "10px",
+                    padding: "10px",
+                    margin: "5px",
+                    width: msg.user === "Chủ phòng thông báo" ? "100%" : "40%",
+                    wordWrap: "break-word",
+                  }}
+                >
+                  <strong>{msg.user}</strong>: {msg.message}
+                  <p style={{fontSize:"13px",textAlign:"end",marginTop:"4px"}}>{msg.timestamp}  </p>
+                </div>
+              ))}
+            </ol>
+          </div>
+        )}
       </div>
       <div className="formchat">
         {!chatRoom ? (
@@ -103,7 +101,6 @@ function App() {
               style={{ width: 300 }}
               initialValues={{ remember: true }}
               onFinish={joinChatRoom}
-              autoComplete="off"
             >
               <div style={{ textAlign: "center" }}>
                 <img
@@ -126,9 +123,9 @@ function App() {
                 rules={[{ required: true, message: "Vui lòng chọn phòng!" }]}
               >
                 <Select>
-                  <Select.Option value="room1">Room 1</Select.Option>
-                  <Select.Option value="room2">Room 2</Select.Option>
-                  <Select.Option value="room3">Room 3</Select.Option>
+                  <Select.Option value="Software">Software</Select.Option>
+                  <Select.Option value="HCNS">HCNS</Select.Option>
+                  <Select.Option value="MKT">MKT</Select.Option>
                 </Select>
               </Form.Item>
               <Form.Item style={{ textAlign: "center" }}>
@@ -141,13 +138,12 @@ function App() {
         ) : (
           <>
             <Form
-              name="basic"
+              name="chatRoom"
               layout="vertical"
               form={form}
               onFinish={onFinish}
-              autoComplete="off"
             >
-              <Flex align="center" i>
+              <Flex align="center">
                 <Form.Item
                   style={{ width: 400 }}
                   // label="Nội dung"
@@ -158,8 +154,6 @@ function App() {
                 >
                   <Input
                     size="large"
-                    placeholder="large size"
-                    // suffix={<ArrowUpOutlined />}
                   />
                 </Form.Item>
                 <Form.Item>
