@@ -37,10 +37,12 @@
   border-bottom-right-radius: 20px !important;
 } 
 
-
+#chatRoom{
+    width: 600px;
+}
 .chat {
     display: flex;
     flex-direction: column;
+    width: 50%;
 }
-
 

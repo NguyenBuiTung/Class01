@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Button, Flex, Form, Input, message, Select } from "antd";
-import { ArrowUpOutlined, LogoutOutlined } from "@ant-design/icons";
+import { Button, Flex, Form, Input, message, Select, Tooltip } from "antd";
+import { LogoutOutlined, RightCircleOutlined } from "@ant-design/icons";
 import "./App.css";
 import * as signalR from "@microsoft/signalr";
-
+import InputEmoji from "react-input-emoji";
 function App() {
   const [form] = Form.useForm();
   const [messages, setMessages] = useState([]);
@@ -49,7 +49,6 @@ function App() {
           // Update the chat room and user if the join was successful
           setChatRoom(room);
           setUser(username);
-       
         }
       });
       // message.success("Đã vào phòng chat");
@@ -60,13 +59,13 @@ function App() {
       });
     }
   };
-
-  const onFinish = async (values) => {
-    const mess = values.message;
-    form.resetFields(); // Reset form fields after message is sent
+  const [textChat, setTextChat] = useState("");
+  console.log(textChat)
+  const onFinish = async () => {
     if (connection && chatRoom) {
-      await connection.send("SendMessageToRoom", chatRoom, user, mess);
+      await connection.send("SendMessageToRoom", chatRoom, user, textChat);
     }
+    setTextChat("");
   };
   const leaveChatRoom = async () => {
     if (connection && chatRoom && user) {
@@ -77,23 +76,57 @@ function App() {
       message.success("Bạn đã rời phòng chat.");
     }
   };
-// Add the event listener for page unload
-useEffect(() => {
-  const handleBeforeUnload = async (event) => {
-    await leaveChatRoom();
-    event.preventDefault(); // For some browsers to show a confirmation dialog
-    event.returnValue = ''; // For some browsers to show a confirmation dialog
-  };
+  // Add the event listener for page unload
+  useEffect(() => {
+    const handleBeforeUnload = async (event) => {
+      await leaveChatRoom();
+      event.preventDefault(); // For some browsers to show a confirmation dialog
+      event.returnValue = ""; // For some browsers to show a confirmation dialog
+    };
 
-  window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener("beforeunload", handleBeforeUnload);
 
-  return () => {
-    window.removeEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [connection, chatRoom, user]);
+  const [backgroundImage, setBackgroundImage] = useState("");
+
+  const handleChangeBg = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setBackgroundImage(`url(${reader.result})`);
+      };
+      reader.readAsDataURL(file);
+    }
   };
-}, [connection, chatRoom, user]);
   return (
-    <div className="chatbox">
+    <div
+      className="chatbox"
+      style={{
+        backgroundImage: backgroundImage,
+        backgroundSize: "cover",
+        height: "100vh",
+      }}
+    >
       <h1>Realtime ChatRoom Class01</h1>
+      <Button
+        style={{ margin: "0 auto" }}
+        type="primary"
+        onClick={() => document.getElementById("bgInput").click()}
+      >
+        Thay hình nền
+      </Button>
+      <input
+        type="file"
+        id="bgInput"
+        style={{ display: "none" }}
+        onChange={handleChangeBg}
+        accept="image/*"
+      />
+
       <div style={{ overflow: "auto" }}>
         {chatRoom && (
           <div style={{ display: "flex", justifyContent: "center" }}>
@@ -181,36 +214,35 @@ useEffect(() => {
               onFinish={onFinish}
             >
               <Flex align="center">
-                <Form.Item
-                  style={{ width: 400 }}
-                  // label="Nội dung"
-                  name="message"
-                  rules={[
-                    { required: true, message: "Vui lòng nhập nội dung" },
-                  ]}
-                >
-                  <Input size="large" />
-                </Form.Item>
-                <Form.Item>
-                  <Button
-                    className="sendbutton"
-                    size="large"
-                    type="primary"
-                    htmlType="submit"
-                  >
-                    Gửi <ArrowUpOutlined style={{ marginLeft: 8 }} />
-                  </Button>
-                </Form.Item>
-              </Flex>
-              <Form.Item style={{textAlign:"center"}}>
-                <Button  style={{borderRadius:"50%",width:50,height:50}}
+                <InputEmoji
+                  value={textChat}
+                  onChange={setTextChat}
+                  cleanOnEnter
+                  onEnter={onFinish}
+                  placeholder="Nhập tin nhắn"
+                />
+                <Button
+                  disabled={textChat.trim() === ""}
+                  className="sendbutton"
                   size="large"
                   type="primary"
-                  danger
-                  onClick={leaveChatRoom}
+                  htmlType="submit"
                 >
-                   <LogoutOutlined />
+                  Gửi <RightCircleOutlined style={{ marginLeft: 8 }} />
                 </Button>
+              </Flex>
+              <Form.Item style={{ textAlign: "center", marginTop: 20 }}>
+                <Tooltip title="Rời khỏi phòng chat">
+                  <Button
+                    style={{ borderRadius: "50%", width: 50, height: 50 }}
+                    size="large"
+                    type="primary"
+                    danger
+                    onClick={leaveChatRoom}
+                  >
+                    <LogoutOutlined />
+                  </Button>
+                </Tooltip>
               </Form.Item>
             </Form>
           </>
